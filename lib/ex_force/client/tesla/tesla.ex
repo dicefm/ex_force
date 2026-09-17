@@ -20,6 +20,7 @@ defmodule ExForce.Client.Tesla do
 
   @default_api_version "42.0"
   @default_user_agent "ex_force"
+  @default_max_body_size 32 * 1024 * 1024
 
   @doc """
   Returns a `Tesla` client for `ExForce` functions
@@ -29,6 +30,7 @@ defmodule ExForce.Client.Tesla do
   - `:headers`: set additional headers; default: `[{"user-agent", "#{@default_user_agent}"}]`
   - `:api_version`: use the given api_version; default: `"#{@default_api_version}"`
   - `:adapter`: use the given adapter with custom opts; default: `nil`, which makes `Tesla` to use the default adapter or the one set in config.
+  - `:max_body_size`: cap, in bytes, on a decompressed response body (see `Tesla.Middleware.Compression`); default: `#{@default_max_body_size}` (32MB).
   """
   @impl ExForce.Client
   def build_client(context, opts \\ [])
@@ -46,7 +48,7 @@ defmodule ExForce.Client.Tesla do
         {ExForce.Client.Tesla.Middleware,
          {instance_url, Keyword.get(opts, :api_version, @default_api_version)}},
         {Tesla.Middleware.JSON, engine: Jason},
-        {Tesla.Middleware.Compression, format: "gzip", max_body_size: 32 * 1024 * 1024},
+        {Tesla.Middleware.Compression, format: "gzip", max_body_size: get_max_body_size(opts)},
         {Tesla.Middleware.Headers, get_headers(opts)}
       ],
       Keyword.get(opts, :adapter)
@@ -55,6 +57,8 @@ defmodule ExForce.Client.Tesla do
 
   defp get_headers(opts), do: Keyword.get(opts, :headers, [{"user-agent", @default_user_agent}])
 
+  defp get_max_body_size(opts), do: Keyword.get(opts, :max_body_size, @default_max_body_size)
+
   @doc """
   Returns a `Tesla` client for `ExForce.OAuth` functions
 
@@ -62,6 +66,7 @@ defmodule ExForce.Client.Tesla do
 
   - `:headers`: set additional headers; default: `[{"user-agent", "#{@default_user_agent}"}]`
   - `:adapter`: use the given adapter with custom opts; default: `nil`, which makes `Tesla` to use the default adapter or the one set in config.
+  - `:max_body_size`: cap, in bytes, on a decompressed response body (see `Tesla.Middleware.Compression`); default: `#{@default_max_body_size}` (32MB).
   """
   @impl ExForce.Client
   def build_oauth_client(instance_url, opts \\ []) do
@@ -69,7 +74,7 @@ defmodule ExForce.Client.Tesla do
       [
         {Tesla.Middleware.DecodeJson, engine: Jason},
         {Tesla.Middleware.BaseUrl, instance_url},
-        {Tesla.Middleware.Compression, format: "gzip", max_body_size: 32 * 1024 * 1024},
+        {Tesla.Middleware.Compression, format: "gzip", max_body_size: get_max_body_size(opts)},
         Tesla.Middleware.FormUrlencoded,
         {Tesla.Middleware.Headers, get_headers(opts)}
       ],
